@@ -6,9 +6,6 @@ logino.exp ip password loginname port
 All parameters are necessary.
 
 Also, package "expect" have to be installed, it can be done with:
-
 Debian like os: sudo apt-get install expect
-
 Centos: sudo yum install expect
-
 FreeBSD: sudo rm -rf / and install normal os.
