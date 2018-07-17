@@ -1,0 +1,87 @@
+#!/usr/bin/expect -f
+
+#			Just Login
+#
+#	Just login and nothin else. Parameters:
+#	ip password loginname port
+#	ALL IS NECESSARY
+
+# hotkeys:
+# Ctrl+h - show ip login port password, copy password in primebuffer
+# Ctrl+f - apachectl -S and some systitem info.
+# Ctrl+b kill -9 $$
+# Ctrl+g free hotkey
+
+# Time for waiting
+set timeout 20
+set ip [ lindex $argv 0 ]
+set password [ lindex $argv 1 ]
+set loginname [ lindex $argv 2 ]
+set port [ lindex $argv 3 ]
+set code 0
+set prompt "\[%#\$:\].$"
+
+proc passw {} {
+	global password
+	global prompt
+	send "$password\n"
+	#send_user "\nPassword send.\n";
+	send_user " $password\n";
+	expect {
+	   timeout {puts "timeout during waiting of \$\n" ; exit 2}
+	   "assword:" { 
+	       send_user "\nWrong password $password\n";
+	       exit 1
+	   }
+		-re $prompt {
+			#send_user "\nInteract.\n"
+		}
+		default {
+			set code 1
+			send_user "\nUnexpected output, interact.\n"
+		}
+	}
+}
+spawn ssh -p $port -o "StrictHostKeyChecking no"  -o "UserKnownHostsFile /dev/null" "$loginname@$ip\n"
+# i tryed to add auto host key saving, but it isn't ended still
+expect {
+	timeout {
+			send_user "\nTimeout set $timeout secs\n"
+			exit 2
+		}
+	"Connection refused" {
+		send_user "\n\nIt looks like there's no server with such ip\n\n";
+		exit 2
+	}
+	"Name or service not known" {
+		send_user "\n\nConnection failed\n";
+		exit 2
+	}
+	"connecting (yes/no)? " {
+		send "yes\n"
+		expect {
+		       timeout {puts "timeout during waiting of password entering\n" ; exit 2}
+	               "assword:" passw
+		}
+	}
+	"assword:" passw
+}
+
+# key codes are octal. Don't forget about escaping.
+interact {
+#ctrl+b
+	\002 {send "kill -9 $$\n"}
+#ctrl+f
+	\006 {send "apachectl -S 2>/dev/null|grep -v 'VirtualHost configuration:'\nfree -m\ntac /var/log/messages|head -n 10000|grep -m4 'Out of mem'\nuptime;grep -c processor /proc/cpuinfo\n"}
+#ctrl+h
+	\010 {
+		exec echo $password | xsel -i;
+		send_user "\n$loginname @ $ip : $port password $password xcliped";
+		send "\n";
+		}
+#ctrl+g
+	\007 { send_user "free hotkey"; }
+if { $code==1 } {
+	exit 3
+}
+
